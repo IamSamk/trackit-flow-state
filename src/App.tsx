@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,28 +14,33 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+// Create a new QueryClient instance
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/table" element={<Table />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  return (
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route element={<MainLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/table" element={<Table />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+};
 
 export default App;
