@@ -1,8 +1,9 @@
+
 // Notion API service implementation
 
-// Hardcoded Notion credentials - typically these would be in .env
-const NOTION_API_KEY = "your-notion-api-key-here"; 
-const NOTION_DATABASE_ID = "your-notion-database-id-here";
+// Notion credentials
+const NOTION_API_KEY = "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"; 
+const NOTION_DATABASE_ID = "1ce69fb2b87280a6be7efea4e080dc35";
 
 interface NotionHabit {
   id: string;
@@ -30,7 +31,7 @@ const mapNotionResultToHabit = (result: any): NotionHabit => {
 };
 
 export const fetchHabits = async (): Promise<NotionHabit[]> => {
-  console.log("Fetching habits with API Key:", NOTION_API_KEY);
+  console.log("Fetching habits from Notion API");
   
   try {
     const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_DATABASE_ID}/query`, {
