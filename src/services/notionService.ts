@@ -1,6 +1,9 @@
 
-// This is a placeholder for the Notion API service
-// You will need to provide Notion API key & database ID to use this
+// Notion API service with hardcoded credentials
+
+// Hardcoded Notion credentials - typically these would be in .env
+const NOTION_API_KEY = "your-notion-api-key-here"; 
+const NOTION_DATABASE_ID = "your-notion-database-id-here";
 
 interface NotionHabit {
   id: string;
@@ -14,12 +17,14 @@ interface NotionHabit {
 
 // Mock data, replace with actual API calls
 export const fetchHabits = async (): Promise<NotionHabit[]> => {
-  // This would be an actual API call to Notion
+  console.log("Fetching habits with API Key:", NOTION_API_KEY);
+  
+  // This would be an actual API call to Notion using the hardcoded credentials
   // Example:
-  // const response = await fetch('https://api.notion.com/v1/databases/{databaseId}/query', {
+  // const response = await fetch('https://api.notion.com/v1/databases/${NOTION_DATABASE_ID}/query', {
   //   method: 'POST',
   //   headers: {
-  //     'Authorization': `Bearer ${process.env.NOTION_API_KEY}`,
+  //     'Authorization': `Bearer ${NOTION_API_KEY}`,
   //     'Notion-Version': '2022-06-28',
   //     'Content-Type': 'application/json',
   //   },
@@ -79,17 +84,18 @@ export const fetchHabits = async (): Promise<NotionHabit[]> => {
 };
 
 export const createHabit = async (habitData: Partial<NotionHabit>): Promise<NotionHabit> => {
+  console.log("Creating habit with API Key:", NOTION_API_KEY);
   // This would be an actual API call to Notion
   // Example:
   // const response = await fetch('https://api.notion.com/v1/pages', {
   //   method: 'POST',
   //   headers: {
-  //     'Authorization': `Bearer ${process.env.NOTION_API_KEY}`,
+  //     'Authorization': `Bearer ${NOTION_API_KEY}`,
   //     'Notion-Version': '2022-06-28',
   //     'Content-Type': 'application/json',
   //   },
   //   body: JSON.stringify({
-  //     parent: { database_id: process.env.NOTION_DATABASE_ID },
+  //     parent: { database_id: NOTION_DATABASE_ID },
   //     properties: {
   //       Name: { title: [{ text: { content: habitData.name } }] },
   //       Category: { select: { name: habitData.category } },
@@ -117,6 +123,7 @@ export const updateHabitStatus = async (
   habitId: string, 
   status: 'completed' | 'missed' | 'pending'
 ): Promise<NotionHabit> => {
+  console.log("Updating habit status with API Key:", NOTION_API_KEY);
   // This would be an actual API call to Notion
   // For now, return mock data
   return {
