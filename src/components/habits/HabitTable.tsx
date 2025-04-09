@@ -1,4 +1,5 @@
 
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Table, 
@@ -9,63 +10,16 @@ import {
   TableCell 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Calendar, MoreHorizontal, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Flame, Calendar, MoreHorizontal, CheckCircle, XCircle } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Mock data for habits
-const habits = [
-  {
-    id: "1",
-    name: "Morning Run",
-    category: "Health",
-    frequency: "Daily",
-    streak: 12,
-    completionRate: 94,
-    status: "completed",
-  },
-  {
-    id: "2",
-    name: "Read 30 Minutes",
-    category: "Skills",
-    frequency: "Daily",
-    streak: 8,
-    completionRate: 87,
-    status: "completed",
-  },
-  {
-    id: "3",
-    name: "Meditate",
-    category: "Mental Health",
-    frequency: "Daily",
-    streak: 24,
-    completionRate: 92,
-    status: "completed",
-  },
-  {
-    id: "4",
-    name: "Project Work",
-    category: "Productivity",
-    frequency: "Weekdays",
-    streak: 5,
-    completionRate: 78,
-    status: "missed",
-  },
-  {
-    id: "5",
-    name: "Journal",
-    category: "Mental Health",
-    frequency: "Daily",
-    streak: 15,
-    completionRate: 85,
-    status: "pending",
-  },
-];
+import { fetchHabits, updateHabitStatus } from "@/services/notionService";
 
 const getCategoryColor = (category: string): string => {
   const colors = {
@@ -92,6 +46,72 @@ const getStatusBadge = (status: string) => {
 };
 
 const HabitTable = () => {
+  const { toast } = useToast();
+  
+  const { 
+    data: habits = [], 
+    isLoading, 
+    isError,
+    refetch 
+  } = useQuery({
+    queryKey: ['habits'],
+    queryFn: fetchHabits,
+  });
+
+  const handleStatusUpdate = async (habitId: string, status: 'completed' | 'missed' | 'pending') => {
+    try {
+      await updateHabitStatus(habitId, status);
+      refetch(); // Refresh habits after update
+      
+      toast({
+        title: "Status updated",
+        description: `Habit marked as ${status}`,
+      });
+    } catch (error) {
+      console.error("Error updating habit status:", error);
+      toast({
+        title: "Update failed",
+        description: "Could not update habit status",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Habits</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Habits</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-destructive p-4">
+            Error loading habits. Please check your Notion API settings.
+          </div>
+          <div className="flex justify-center">
+            <Button onClick={() => refetch()} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -112,51 +132,59 @@ const HabitTable = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {habits.map((habit) => (
-                <TableRow key={habit.id}>
-                  <TableCell className="font-medium">{habit.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={getCategoryColor(habit.category)}>
-                      {habit.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{habit.frequency}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Flame size={16} className="text-amber-500" />
-                      <span>{habit.streak} days</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">{habit.completionRate}%</TableCell>
-                  <TableCell className="text-center">
-                    {getStatusBadge(habit.status)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                          Mark Complete
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <XCircle className="mr-2 h-4 w-4 text-red-500" />
-                          Mark Missed
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Calendar className="mr-2 h-4 w-4" />
-                          View History
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {habits.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    No habits found. Create your first habit to get started.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                habits.map((habit) => (
+                  <TableRow key={habit.id}>
+                    <TableCell className="font-medium">{habit.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getCategoryColor(habit.category)}>
+                        {habit.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{habit.frequency}</TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Flame size={16} className="text-amber-500" />
+                        <span>{habit.streak} days</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">{habit.completionRate}%</TableCell>
+                    <TableCell className="text-center">
+                      {getStatusBadge(habit.status)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="rounded-full">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleStatusUpdate(habit.id, 'completed')}>
+                            <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                            Mark Complete
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleStatusUpdate(habit.id, 'missed')}>
+                            <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                            Mark Missed
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Calendar className="mr-2 h-4 w-4" />
+                            View History
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

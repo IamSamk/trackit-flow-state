@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { createHabit } from "@/services/notionService";
 
 interface NewHabitDialogProps {
   open: boolean;
@@ -36,26 +38,59 @@ const frequencies = [
 ];
 
 const NewHabitDialog = ({ open, onOpenChange }: NewHabitDialogProps) => {
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [habitName, setHabitName] = useState("");
+  const [category, setCategory] = useState("health");
+  const [frequency, setFrequency] = useState("daily");
+  const [reminder, setReminder] = useState("none");
+  const [notes, setNotes] = useState("");
   
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    // Simulate API call to Notion
-    setTimeout(() => {
-      setLoading(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const createHabitMutation = useMutation({
+    mutationFn: createHabit,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      resetForm();
       onOpenChange(false);
       toast({
         title: "Habit created",
         description: "Your new habit has been successfully created.",
       });
-    }, 1000);
+    },
+    onError: (error) => {
+      console.error("Error creating habit:", error);
+      toast({
+        title: "Creation failed",
+        description: "Could not create habit. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const resetForm = () => {
+    setHabitName("");
+    setCategory("health");
+    setFrequency("daily");
+    setReminder("none");
+    setNotes("");
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    createHabitMutation.mutate({
+      name: habitName,
+      category: categories.find(c => c.id === category)?.name || "Health",
+      frequency: frequencies.find(f => f.id === frequency)?.name || "Daily",
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!newOpen) resetForm();
+      onOpenChange(newOpen);
+    }}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Habit</DialogTitle>
@@ -67,24 +102,34 @@ const NewHabitDialog = ({ open, onOpenChange }: NewHabitDialogProps) => {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Habit Name</Label>
-              <Input id="name" placeholder="e.g., Morning Run" required />
+              <Input 
+                id="name" 
+                placeholder="e.g., Morning Run" 
+                value={habitName}
+                onChange={(e) => setHabitName(e.target.value)}
+                required 
+              />
             </div>
             
             <div className="grid gap-2">
               <Label htmlFor="category">Category</Label>
-              <Select required defaultValue="health">
+              <Select 
+                required 
+                value={category} 
+                onValueChange={setCategory}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
                       <div className="flex items-center">
                         <div 
                           className="w-3 h-3 rounded-full mr-2" 
-                          style={{ backgroundColor: category.color }}
+                          style={{ backgroundColor: cat.color }}
                         />
-                        {category.name}
+                        {cat.name}
                       </div>
                     </SelectItem>
                   ))}
@@ -94,14 +139,18 @@ const NewHabitDialog = ({ open, onOpenChange }: NewHabitDialogProps) => {
             
             <div className="grid gap-2">
               <Label>Frequency</Label>
-              <Select required defaultValue="daily">
+              <Select 
+                required 
+                value={frequency} 
+                onValueChange={setFrequency}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
                 <SelectContent>
-                  {frequencies.map((frequency) => (
-                    <SelectItem key={frequency.id} value={frequency.id}>
-                      {frequency.name}
+                  {frequencies.map((freq) => (
+                    <SelectItem key={freq.id} value={freq.id}>
+                      {freq.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -110,7 +159,11 @@ const NewHabitDialog = ({ open, onOpenChange }: NewHabitDialogProps) => {
             
             <div className="grid gap-2">
               <Label htmlFor="reminder">Reminder</Label>
-              <RadioGroup defaultValue="none" className="flex flex-col space-y-1">
+              <RadioGroup 
+                value={reminder} 
+                onValueChange={setReminder} 
+                className="flex flex-col space-y-1"
+              >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="none" id="none" />
                   <Label htmlFor="none">No reminder</Label>
@@ -128,15 +181,30 @@ const NewHabitDialog = ({ open, onOpenChange }: NewHabitDialogProps) => {
             
             <div className="grid gap-2">
               <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea id="notes" placeholder="Any additional details..." />
+              <Textarea 
+                id="notes" 
+                placeholder="Any additional details..." 
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => {
+                resetForm();
+                onOpenChange(false);
+              }}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Habit"}
+            <Button 
+              type="submit" 
+              disabled={createHabitMutation.isPending}
+            >
+              {createHabitMutation.isPending ? "Creating..." : "Create Habit"}
             </Button>
           </DialogFooter>
         </form>
